@@ -36,4 +36,3 @@ jobs:
             verity_hash.img
             verity_output.txt
             roothash.txt
-            
