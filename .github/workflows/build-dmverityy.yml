@@ -1,0 +1,39 @@
+name: Build dm-verity Image
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-dmverity:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Install cryptsetup
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cryptsetup
+
+      - name: Set execute permission for build_verity.sh
+        run: chmod +x build_verity.sh
+
+      - name: Run build_verity.sh
+        run: sudo ./build_verity.sh
+
+      - name: Fix file permissions for artifacts
+        run: sudo chown $USER:$USER verity_data.img verity_hash.img verity_output.txt roothash.txt
+
+      - name: Upload dm-verity Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dm-verity-artifacts
+          path: |
+            verity_data.img
+            verity_hash.img
+            verity_output.txt
+            roothash.txt
+            
