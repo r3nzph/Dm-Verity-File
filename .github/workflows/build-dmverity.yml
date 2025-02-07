@@ -45,7 +45,11 @@ jobs:
           echo "Extracted Root hash:"
           cat roothash.txt
 
-      - name: Test dm-verity Mapping
+      - name: Fix file permissions for artifact upload
+        run: |
+          sudo chown $USER:$USER verity_data.img verity_hash.img verity_output.txt roothash.txt
+
+      - name: Test dm-verity Mapping (Optional)
         run: |
           echo "Creating dm-verity mapping..."
           sudo veritysetup create verity-mapped verity_data.img verity_hash.img $(cat roothash.txt)
