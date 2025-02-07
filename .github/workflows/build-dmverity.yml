@@ -13,7 +13,7 @@ jobs:
     steps:
       # Step 1: Check out the repository
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Step 2: Install Dependencies (cryptsetup provides veritysetup)
       - name: Install cryptsetup
