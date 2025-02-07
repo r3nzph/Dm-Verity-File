@@ -1,0 +1,77 @@
+name: Build dm-verity Image
+
+# Trigger on push to main or via manual dispatch
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-dmverity:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Check out the repository
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      # Step 2: Install Dependencies (cryptsetup provides veritysetup)
+      - name: Install cryptsetup
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cryptsetup
+
+      # Step 3: Create a 100MB blank image and format it as ext4
+      - name: Create File System Image
+        run: |
+          echo "Creating a 100MB image file..."
+          dd if=/dev/zero of=verity_data.img bs=1M count=100
+          echo "Formatting image as ext4..."
+          mkfs.ext4 verity_data.img
+
+      # Step 4: Populate the image with a test file
+      - name: Populate Image with Test Data
+        run: |
+          mkdir -p mnt
+          sudo mount -o loop verity_data.img mnt
+          echo "Hello, dm-verity!" | sudo tee mnt/hello.txt > /dev/null
+          sudo umount mnt
+
+      # Step 5: Generate the dm-verity hash tree and output parameters
+      - name: Generate dm-verity Hash Tree
+        run: |
+          echo "Running veritysetup format..."
+          sudo veritysetup format verity_data.img verity_hash.img > verity_output.txt
+          echo "Generated verity output:"
+          cat verity_output.txt
+
+      # Step 6: Extract the Root Hash from the veritysetup output
+      - name: Extract Root Hash
+        run: |
+          grep "Root hash:" verity_output.txt | awk '{print $3}' > roothash.txt
+          echo "Extracted Root hash:"
+          cat roothash.txt
+
+      # Step 7: (Optional) Test dm-verity mapping locally
+      - name: Test dm-verity Mapping
+        run: |
+          echo "Creating dm-verity mapping..."
+          sudo veritysetup create verity-mapped verity_data.img verity_hash.img $(cat roothash.txt)
+          sudo mkdir -p mnt2
+          sudo mount -o ro /dev/mapper/verity-mapped mnt2
+          echo "Listing files in the mapped device:"
+          ls -l mnt2
+          sudo umount mnt2
+          sudo veritysetup remove verity-mapped
+
+      # Step 8: Upload the generated artifacts for later use
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: dm-verity-artifacts
+          path: |
+            verity_data.img
+            verity_hash.img
+            verity_output.txt
+            roothash.txt
+            
